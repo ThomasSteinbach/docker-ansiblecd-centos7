@@ -30,5 +30,9 @@ RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/' /etc/sudoers
 COPY bin/systemd-await-target /usr/bin/systemd-await-target
 COPY bin/wait-for-boot /usr/bin/wait-for-boot
 
+# use fixed yum mirror to make effort of proxy cache
+RUN sed -i 's%mirrorlist%#mirrorlist%g' /etc/yum.repos.d/*; \
+    sed -i 's%#baseurl%baseurl%g' /etc/yum.repos.d/*
+
 VOLUME ["/sys/fs/cgroup"]
 ENTRYPOINT ["/usr/sbin/init"]
