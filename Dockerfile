@@ -9,8 +9,8 @@ ENV container=docker
 RUN yum makecache fast \
     && yum -y install deltarpm epel-release initscripts \
     && yum -y update  \
-    && yum -y install sudo which less  \
-    && yum clean all >/dev/null \
+    && yum -y install sudo which less docker-client  \
+    && yum clean all >/dev/null
 
 RUN \
     rm -f /usr/lib/systemd/system/sysinit.target.wants/systemd-firstboot.service; \
