@@ -19,4 +19,4 @@ EXPOSE 22/tcp
 HEALTHCHECK --interval=5s --timeout=3s \
   CMD < /dev/tcp/127.0.0.1/22
 
-CMD ["/usr/bin/sshd", "-D", "-e"]
+CMD ["/usr/sbin/sshd", "-D", "-e"]
