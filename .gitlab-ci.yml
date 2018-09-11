@@ -1,0 +1,69 @@
+.gitlab-registry-login: &docker-login
+  docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+
+image: docker:latest
+
+stages:
+  - lint
+  - build
+  - debug
+  - test
+  - publish
+
+hadolint:
+  stage: lint
+  image: hadolint/hadolint:latest-debian 
+  script: hadolint
+            --ignore DL3007
+            --ignore DL3008
+            --ignore SC2016
+            Dockerfile
+build:
+  stage: build
+  script:
+    - *docker-login
+    - docker build --pull -t "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" . | tee docker-build-debug.out
+    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+  artifacts:
+    paths:
+      - docker-build-debug.out
+    when: on_failure
+    expire_in: 30 mins
+
+debug-failed-build:
+  stage: debug
+  script:
+    - *docker-login
+    - DEBUG_LAYER=$(grep '\-\-\-> [0-9a-z]' docker-build-debug.out |tail -1| cut -b 7-)
+    - docker tag "$DEBUG_LAYER" "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-failed"
+    - docker push "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}-failed"
+  when: on_failure
+  dependencies:
+    - build
+
+test:ssh-port:
+  stage: test
+  image: busybox:latest
+  services:
+    - name: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+      alias: aci-target
+  script: echo exit | telnet aci-target 22
+
+test:playbook:
+  stage: test
+  image: thomass/ansibleci
+  services:
+    - name: "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
+      alias: aci-target
+  variables:
+    PLAYBOOKDIR: "${CI_PROJECT_DIR}/test-playbook"
+  script: run-tests
+
+dockerhub:
+  stage: publish
+  script:
+    - if [ "$CI_COMMIT_REF_SLUG" == "master" ]; then IMAGE_TAG="latest"; else IMAGE_TAG="$CI_COMMIT_REF_SLUG"; fi
+    - IMAGE_NAME="${GITLAB_SECRET_DOCKER_USER}/${CI_PROJECT_NAME}:${IMAGE_TAG}"
+    - docker tag "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}" "$IMAGE_NAME"
+    - docker login -u "$GITLAB_SECRET_DOCKER_USER" -p "$GITLAB_SECRET_DOCKER_PASSWORD"
+    - docker push "$IMAGE_NAME"

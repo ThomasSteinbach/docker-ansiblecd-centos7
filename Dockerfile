@@ -1,38 +1,22 @@
 FROM centos:7
-MAINTAINER Thomas Steinbach
-# with credits upstream: https://hub.docker.com/r/geerlingguy/docker-centos7-ansible/
-# with credits upstream: https://github.com/naftulikay/docker-centos-vm.git
-# with credits to https://developers.redhat.com/blog/2014/05/05/running-systemd-within-docker-container/
+LABEL maintainer="Thomas Steinbach"
 
-ENV container=docker
+RUN yum -y install \
+      sudo \
+      python \
+      openssh-server && \
+    yum clean all >/dev/null
 
-RUN yum makecache fast \
-    && yum -y install deltarpm epel-release initscripts \
-    && yum -y update  \
-    && yum -y install sudo which less docker-client  \
-    && yum clean all >/dev/null
+RUN /usr/bin/ssh-keygen -A
 
-RUN \
-    rm -f /usr/lib/systemd/system/sysinit.target.wants/systemd-firstboot.service; \
-    rm -f /etc/systemd/system/*.wants/*; \
-    rm -f /lib/systemd/system/sysinit.target.wants/systemd-tmpfiles-setup.service; \
-    rm -f /lib/systemd/system/multi-user.target.wants/*; \
-    rm -f /lib/systemd/system/local-fs.target.wants/*; \
-    rm -f /lib/systemd/system/sockets.target.wants/*udev*; \
-    rm -f /lib/systemd/system/sockets.target.wants/*initctl*; \
-    rm -f /lib/systemd/system/basic.target.wants/*; \
-    rm -f /lib/systemd/system/anaconda.target.wants/*;
+RUN useradd --home-dir /gitlab --create-home gitlab
+WORKDIR /gitlab
+# https://github.com/hadolint/hadolint/wiki/DL4006
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+RUN echo "gitlab:gitlab" | chpasswd
 
-# disable requiretty.
-RUN sed -i -e 's/^\(Defaults\s*requiretty\)/#--- \1/' /etc/sudoers
+EXPOSE 22/tcp
+HEALTHCHECK --interval=5s --timeout=3s \
+  CMD < /dev/tcp/127.0.0.1/22
 
-# custom utility for awaiting systemd "boot" in the container
-COPY bin/systemd-await-target /usr/bin/systemd-await-target
-COPY bin/wait-for-boot /usr/bin/wait-for-boot
-
-# use fixed yum mirror to make effort of proxy cache
-RUN sed -i 's%mirrorlist%#mirrorlist%g' /etc/yum.repos.d/*; \
-    sed -i 's%#baseurl%baseurl%g' /etc/yum.repos.d/*
-
-VOLUME ["/sys/fs/cgroup"]
-ENTRYPOINT ["/usr/sbin/init"]
+CMD ["/usr/bin/sshd", "-D", "-e"]
