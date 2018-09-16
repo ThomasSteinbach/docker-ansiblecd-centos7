@@ -7,9 +7,10 @@ RUN yum -y install \
       openssh-server && \
     yum clean all >/dev/null
 
-RUN /usr/bin/ssh-keygen -A
+RUN /usr/bin/ssh-keygen -A && \
+    sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g' /etc/sudoers
 
-RUN useradd --home-dir /gitlab --create-home gitlab
+RUN useradd --home-dir /gitlab --create-home -groups wheel gitlab
 WORKDIR /gitlab
 # https://github.com/hadolint/hadolint/wiki/DL4006
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
