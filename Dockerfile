@@ -10,7 +10,7 @@ RUN yum -y install \
 RUN /usr/bin/ssh-keygen -A && \
     sed -i 's/# %wheel ALL=(ALL) ALL/%wheel ALL=(ALL) ALL/g' /etc/sudoers
 
-RUN useradd --home-dir /gitlab --create-home -groups wheel gitlab
+RUN useradd --home-dir /gitlab --create-home --groups wheel gitlab
 WORKDIR /gitlab
 # https://github.com/hadolint/hadolint/wiki/DL4006
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
