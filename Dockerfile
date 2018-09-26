@@ -1,7 +1,8 @@
 FROM centos:7
 LABEL maintainer="Thomas Steinbach"
 
-RUN yum -y install \
+RUN yum -y upgrade && \
+    yum -y install \
       sudo \
       python \
       openssh-server && \
