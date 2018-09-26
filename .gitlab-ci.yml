@@ -47,6 +47,8 @@ clair:
   services:
     - name: arminc/clair-db:latest
       alias: postgres
+  variables:
+    CLAIR_THRESHOLD: "High"
   script: scan "${CI_REGISTRY_IMAGE}:${CI_COMMIT_REF_SLUG}"
 
 test:ssh-port:
